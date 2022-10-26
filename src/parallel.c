@@ -154,7 +154,7 @@ void comp(Country* country) {
         curRegion->menor = countryMin = regionMin;
         curRegion->media = bestRegion = regionMed;
         curRegion->mediana = mediana(freqs, country->nCities * country->nStudents);
-        curRegion->dp = dpParalelo(freqs, country->nCities * country->nStudents, curRegion->media);
+        curRegion->dp = dpParalelo(freqs, country->nCities * country->nStudents, regionMed);
 
         #ifdef DEBUG
         for (int k = 0; k < SPREAD; ++k) {
@@ -169,7 +169,7 @@ void comp(Country* country) {
     country->menor = countryMin;
     country->media = countryMed;
     country->mediana = mediana(freqs, country->nRegions * country->nCities * country->nStudents);
-    country->dp = dpParalelo(freqs, country->nRegions * country->nCities * country->nStudents, country->media);
+    country->dp = dpParalelo(freqs, country->nRegions * country->nCities * country->nStudents, countryMed);
     country->bestCity.value = bestCity; country->bestCity.city = ULONG_MAX; country->bestCity.region = ULONG_MAX;
     country->bestRegion.value = bestRegion; country->bestRegion.region = ULONG_MAX;
 }
