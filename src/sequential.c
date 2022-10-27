@@ -17,8 +17,8 @@ typedef struct{
     int maximo;
     int minimo;
     int soma;
-    int med;
-    float desvio;
+    float desvio,
+        med;
 } Dados;
 
 //Uma Struct para acompanhar a cidade e região com maior média.
@@ -79,7 +79,7 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
     float desvio = sqrt(desvio_total/(tamanho-1));
 
     //Usa o vetor de frequências  para calcular a mediana.
-    int med = mediana(freq->cidade,tamanho);
+    float med = mediana(freq->cidade,tamanho);
 
     #ifdef DEBUG
     printf("-> Valores gerados para a cidade: \n");
@@ -90,7 +90,7 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
     #endif
 
     //Imprime o resultado.
-    printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %d, média: %.2f e DP: %.2f\n",r,c,ret.minimo,ret.maximo,med,media,desvio);
+    printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n",r,c,ret.minimo,ret.maximo,med,media,desvio);
 
     return ret;
 } 
@@ -179,7 +179,7 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
     for( int r = 0; r < tam_pais; r++){
         Dados ret = regioes[r];
         float media = (float) ret.soma/(tam_regiao*tam_cidade);
-        printf("Reg %d: menor: %d, maior: %d, mediana: %d, média: %.2f e DP: %.2f\n",r,ret.minimo,ret.maximo,ret.med,media,ret.desvio);
+        printf("Reg %d: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n",r,ret.minimo,ret.maximo,ret.med,media,ret.desvio);
     }
     free(regioes);
     printf("\n");
@@ -196,12 +196,14 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
     float desvio = sqrt(desvio_total/(tam_pais*tam_regiao*tam_cidade-1));
 
     //Usa o vetor de frequências  para calcular a mediana.
-    int med = mediana(freq.brasil,tam_pais*tam_regiao*tam_cidade);
+    float med = mediana(freq.brasil,tam_pais*tam_regiao*tam_cidade);
 
     //Imprime os dados nacionais, a cidade e região premeadas.
-    printf("Brasil: menor: %d, maior: %d, mediana: %d, média: %.2f e DP: %.2f\n",ret.minimo,ret.maximo,med,media,desvio);
+    printf("Brasil: menor: %d, maior: %d, mediana: %.2f, média: %.2f e DP: %.2f\n",ret.minimo,ret.maximo,med,media,desvio);
     printf("\n");
+    printf(": %f\n", melhores.r_media);
     printf("Melhor região: Região %d\n",melhores.r_regiao);
+    printf(": %f\n", melhores.c_media);
     printf("Melhor cidade: Região %d, cidade %d\n",melhores.c_regiao,melhores.c_cidade);
     return ret;
 }

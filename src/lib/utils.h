@@ -12,16 +12,27 @@
 unsigned int* valoresAleatorios(unsigned int size);
 
 // Acha a mediana baseado em um vetor de frequências e seu tamanho.
-static inline unsigned int mediana(unsigned int freqs[SPREAD], unsigned long tam) {
+static inline float mediana(unsigned int freqs[SPREAD], unsigned long tam) {
     unsigned long med = tam/2;
     unsigned int pos = 0;
+    float r = 0;
     for (int i = 0; i < SPREAD; ++i) {
-        if ((pos + freqs[i]) > med)
-            return i;
-        else
+        if ((pos + freqs[i]) > med) {
+            if (tam % 2 || (med - pos) < freqs[i]) {
+                r = i;
+            } else {
+                r += i/2.f;
+                for (int j = i + 1; j < SPREAD; ++j) {
+                    if (!freqs[j]) continue;
+                    r += j/2.f;
+                    break;
+                }
+            }
+            break;
+        } else
             pos += freqs[i];
     }
-    return UINT_MAX;
+    return r;
 }
 
 // Acha o desvio padrão baseado no vetor de frequências, seu tamanho e a média previamente calculada.
