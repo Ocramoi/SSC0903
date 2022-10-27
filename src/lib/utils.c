@@ -9,6 +9,6 @@
 unsigned int* valoresAleatorios(unsigned int size) {
     unsigned int* notas = malloc(size * sizeof(typeof(size)));
     for (unsigned int i = 0; i < size; i++)
-        notas[i] = (int) round(rand() % SPREAD);
+        notas[i] = (unsigned int) round(rand() % SPREAD);
     return notas;
 }

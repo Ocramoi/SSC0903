@@ -7,28 +7,29 @@
 #include <math.h>
 #include <omp.h>
 #include <limits.h>
+#include <time.h>
 
 // Calcula uma lista de notas aleatória.
 unsigned int* valoresAleatorios(unsigned int size);
 
 // Acha a mediana baseado em um vetor de frequências e seu tamanho.
 static inline float mediana(unsigned int freqs[SPREAD], unsigned long tam) {
-    unsigned long med = tam/2;
+    unsigned long med = (tam/2) - 1;
     unsigned int pos = 0;
     float r = 0;
+    unsigned short rep = 0;
     for (int i = 0; i < SPREAD; ++i) {
         if ((pos + freqs[i]) > med) {
-            if (tam % 2 || (med - pos) < freqs[i]) {
+            if (tam % 2) {
                 r = i;
+                break;
             } else {
+                rep++;
+                if (!rep) i--;
                 r += i/2.f;
-                for (int j = i + 1; j < SPREAD; ++j) {
-                    if (!freqs[j]) continue;
-                    r += j/2.f;
-                    break;
-                }
+                pos = med;
+                if (rep == 2) break;
             }
-            break;
         } else
             pos += freqs[i];
     }

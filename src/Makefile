@@ -11,7 +11,7 @@ EXEC_PARALLEL=./build/parallel
 DEXEC_PARALLEL=./build/dparallel
 EXEC_SEQ=./build/seq
 DEXEC_SEQ=./build/dseq
-COMPILE_FLAGS=-Wall -Wextra -Ofast -std=gnu17 -fopenmp
+COMPILE_FLAGS=-Wall -Wextra -Ofast -std=gnu17 -fopenmp -ffast-math
 DEBUG_FLAGS=-Wall -Wextra -Og -g3 -DDEBUG -std=gnu17 -fopenmp
 VALGRIND_FLAGS=--leak-check=full --show-leak-kinds=all --track-origins=yes -s
 LD_FLAGS:=-lm

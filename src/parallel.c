@@ -92,7 +92,7 @@ Country* setup(unsigned int nRegions, unsigned int nCities, unsigned int nStuden
 /* Computa os dados pedidos sobre o país dado e inicializado com os valores passados */
 void comp(Country* country) {
     // Habilita loops paralelizados aninhados
-    omp_set_nested(1);
+    /* omp_set_nested(1); */
 
     unsigned int freqs[SPREAD] = { 0 }, // Vetor de frequências de notas para cálculo
         // Valores a serem calculados no contexto do país
@@ -104,7 +104,7 @@ void comp(Country* country) {
         countryMed = 0;
 
     // Loop paralelo entre as regiões do país reduzindo os valores procurados
-    #pragma omp parallel for reduction(+: freqs[:SPREAD], countryMed) reduction(max: countryMax, bestRegion, bestCity) reduction(min: countryMin)
+    #pragma omp parallel for reduction(+: freqs[:SPREAD], countryMed) reduction(max: countryMax, bestRegion, bestCity) reduction(min: countryMin) firstprivate(country)
     for (typeof(country->nRegions) i = 0; i < country->nRegions; ++i) {
         // Ponteiro para a atual região no loop (auxiliar)
         Region *curRegion = &country->regions[i];
@@ -114,69 +114,63 @@ void comp(Country* country) {
         double regionMed = 0;
         typeof(freqs) regionFreqs = { 0 };
 
-        // Loop entre as cidades de cada região reduzindo os valores procurados
-        #pragma omp parallel for reduction(+: regionFreqs[:SPREAD], regionMed) reduction(max: regionMax, bestCity) reduction(min: regionMin)
+        /* Loop entre as cidades de cada região reduzindo os valores procurados */
+        #pragma omp parallel for reduction(+: regionFreqs[:SPREAD], regionMed) reduction(max: regionMax, bestCity) reduction(min: regionMin) firstprivate(curRegion)
+/* shared(regionMax, bestCity, regionMin) */
         for (typeof(country->nCities) j = 0; j < country->nCities; ++j) {
             // Ponteiro para a atual cidade no loop (auxiliar)
             City *curCity = &curRegion->cities[j];
             // Valores a serem calculados no contexto da cidade
-            unsigned int cityMax,
-                cityMin;
+            unsigned int cityMax = 0, // TODO testar loop separado para gerar frequência e para cálculo
+                cityMin = UINT_MAX;
             double cityMed = 0;
             typeof(freqs) cityFreqs = { 0 };
 
             // Redução dos valores das notas da cidade
-            #pragma omp parallel for reduction(+: cityFreqs[:SPREAD], cityMed) reduction(max: cityMax) reduction(min: cityMin)
+            #pragma omp simd reduction(+: cityFreqs[:SPREAD], cityMed)
+/* reduction(max: cityMax) reduction(min: cityMin) */
             for (typeof(country->nStudents) k = 0; k < country->nStudents; ++k) {
                 unsigned int grade = curCity->grades[k];
                 cityFreqs[grade]++;
-                cityMax = grade;
-                cityMin = grade;
-                /* if (grade > cityMax) cityMax = grade; */
-                /* if (grade < cityMin) cityMin = grade; */
+                /* cityMax = grade; */
+                /* cityMin = grade; */
+                if (grade > cityMax) cityMax = grade;
+                if (grade < cityMin) cityMin = grade;
                 cityMed += grade/(1.f * country->nStudents);
             }
 
             // Registra valores da cidade com base nos dados reduzidos das notas
             regionMed += cityMed/(1.f * country->nCities);
 
-            curCity->maior = regionMax = cityMax;
-            curCity->menor = regionMin = cityMin;
-            curCity->media = bestCity = cityMed;
+            curCity->maior = cityMax;
+            if (cityMax > regionMax) regionMax = cityMax;
+            curCity->menor = cityMin;
+            if (cityMin < regionMin) regionMin = cityMin;
+            curCity->media = cityMed;
+            if (cityMed > bestCity) bestCity = cityMed;
             curCity->mediana = mediana(cityFreqs, country->nStudents);
             curCity->dp = dpParalelo(cityFreqs, country->nStudents, cityMed);
 
             #pragma omp simd
             for (int s = 0; s < SPREAD; ++s)
                 regionFreqs[s] += cityFreqs[s];
-
-            #ifdef DEBUG
-            for (int k = 0; k < SPREAD; ++k) {
-                if (!freqs[k]) continue;
-                printf("Reg %lu - Cid %lu: %lu: %d\n", i, j, k, freqs[k]);
-            }
-            #endif
         }
 
         countryMed += regionMed/(1.f * country->nRegions);
 
         // Registra valores da região com base nos dados reduzidos das cidades
-        curRegion->maior = countryMax = regionMax;
-        curRegion->menor = countryMin = regionMin;
-        curRegion->media = bestRegion = regionMed;
+        curRegion->maior = regionMax;
+        if (regionMax > countryMax) countryMax = regionMax;
+        curRegion->menor = regionMin;
+        if (regionMin < countryMin) countryMin = regionMin;
+        curRegion->media = regionMed;
+        if (regionMed > bestRegion) bestRegion = regionMed;
         curRegion->mediana = mediana(regionFreqs, country->nCities * country->nStudents);
         curRegion->dp = dpParalelo(regionFreqs, country->nCities * country->nStudents, regionMed);
 
         #pragma omp simd
         for (int s = 0; s < SPREAD; ++s)
             freqs[s] += regionFreqs[s];
-
-        #ifdef DEBUG
-        for (int k = 0; k < SPREAD; ++k) {
-            if (!freqs[k]) continue;
-            printf("Reg %lu: %lu: %d\n", i, k, freqs[k]);
-        }
-        #endif
     }
 
     // Registra valores do país com base nos dados reduzidos das regiões
@@ -232,9 +226,7 @@ void display(Country* country) {
         country->dp
     );
 
-    printf("\n: %lf", country->bestRegion.value);
     printf("\nMelhor região: Região %lu", country->bestRegion.region);
-    printf("\n: %lf", country->bestCity.value);
     printf("\nMelhor cidade: Região %lu, Cidade %lu\n", country->bestCity.region, country->bestCity.city);
 }
 
@@ -245,8 +237,15 @@ int main() {
 
     // Gera país
     Country* country = setup(nRegions, nCities, nStudents, seed);
+
+    clock_t init, end, aux;
+    aux = clock();
+    init = clock();
     // Computa valores
     comp(country);
+    end = clock();
+    printf("Time elapsed: %lf\n", (end - init - (init - aux))/(1.f*CLOCKS_PER_SEC));
+
     // Exibição formatada
     display(country);
     // Libera memória
