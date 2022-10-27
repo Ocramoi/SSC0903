@@ -1,0 +1,5 @@
+O speedup Absoluto se da pela formula:
+  Sp = Tempo sequencial / Tempo paralelo
+
+A Eficiência se da pela formula:
+  E = Sp / p, onde 'p' é o numero de processadores
