@@ -91,8 +91,7 @@ Country* setup(unsigned int nRegions, unsigned int nCities, unsigned int nStuden
 
 /* Computa os dados pedidos sobre o país dado e inicializado com os valores passados */
 void comp(Country* country) {
-    // Habilita loops paralelizados aninhados
-    /* omp_set_nested(1); */
+    omp_set_nested(1);
 
     unsigned int freqs[SPREAD] = { 0 }, // Vetor de frequências de notas para cálculo
         // Valores a serem calculados no contexto do país
@@ -104,7 +103,10 @@ void comp(Country* country) {
         countryMed = 0;
 
     // Loop paralelo entre as regiões do país reduzindo os valores procurados
-    #pragma omp parallel for reduction(+: freqs[:SPREAD], countryMed) reduction(max: countryMax, bestRegion, bestCity) reduction(min: countryMin) firstprivate(country)
+    #pragma omp parallel for reduction(+: freqs[:SPREAD], countryMed) \
+        reduction(max: countryMax, bestRegion, bestCity) \
+        reduction(min: countryMin) \
+        firstprivate(country)
     for (typeof(country->nRegions) i = 0; i < country->nRegions; ++i) {
         // Ponteiro para a atual região no loop (auxiliar)
         Region *curRegion = &country->regions[i];
@@ -115,8 +117,10 @@ void comp(Country* country) {
         typeof(freqs) regionFreqs = { 0 };
 
         /* Loop entre as cidades de cada região reduzindo os valores procurados */
-        #pragma omp parallel for reduction(+: regionFreqs[:SPREAD], regionMed) reduction(max: regionMax, bestCity) reduction(min: regionMin) firstprivate(curRegion)
-/* shared(regionMax, bestCity, regionMin) */
+        #pragma omp parallel for reduction(+: regionFreqs[:SPREAD], regionMed) \
+            reduction(max: regionMax, bestCity) \
+            reduction(min: regionMin)           \
+            firstprivate(curRegion)
         for (typeof(country->nCities) j = 0; j < country->nCities; ++j) {
             // Ponteiro para a atual cidade no loop (auxiliar)
             City *curCity = &curRegion->cities[j];
@@ -127,13 +131,12 @@ void comp(Country* country) {
             typeof(freqs) cityFreqs = { 0 };
 
             // Redução dos valores das notas da cidade
-            #pragma omp simd reduction(+: cityFreqs[:SPREAD], cityMed)
-/* reduction(max: cityMax) reduction(min: cityMin) */
+            #pragma omp simd reduction(+: cityFreqs[:SPREAD], cityMed) \
+                reduction(max: cityMax) \
+                reduction(min: cityMin)
             for (typeof(country->nStudents) k = 0; k < country->nStudents; ++k) {
                 unsigned int grade = curCity->grades[k];
                 cityFreqs[grade]++;
-                /* cityMax = grade; */
-                /* cityMin = grade; */
                 if (grade > cityMax) cityMax = grade;
                 if (grade < cityMin) cityMin = grade;
                 cityMed += grade/(1.f * country->nStudents);
@@ -238,13 +241,13 @@ int main() {
     // Gera país
     Country* country = setup(nRegions, nCities, nStudents, seed);
 
-    clock_t init, end, aux;
-    aux = clock();
-    init = clock();
+    double init, end, aux;
+    aux = omp_get_wtime();
+    init = omp_get_wtime();
     // Computa valores
     comp(country);
-    end = clock();
-    printf("Time elapsed: %lf\n", (end - init - (init - aux))/(1.f*CLOCKS_PER_SEC));
+    end = omp_get_wtime();
+    printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
     // Exibição formatada
     display(country);

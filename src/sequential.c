@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 #include "lib/utils.h"
 
@@ -18,9 +19,9 @@ typedef struct{
 typedef struct{
     int maximo;
     int minimo;
-    int soma;
     double desvio,
-        med;
+        med,
+        media;
 } Dados;
 
 //Uma Struct para acompanhar a cidade e região com maior média.
@@ -59,15 +60,12 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
         }
 
         //Atuliza a soma
-        ret.soma += n;
+        ret.media += n/(1.f*tamanho);
     }
 
-    //Calcula a media baseado na soma.
-    double media = (double) ret.soma / tamanho;
-
     //Verifica se é a melhor cidade até o momento.
-    if(media > melhores->c_media){
-        melhores->c_media = media;
+    if(ret.media > melhores->c_media){
+        melhores->c_media = ret.media;
         melhores->c_cidade = cid;
         melhores->c_regiao = reg;
     }
@@ -76,9 +74,9 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
     double desvio_total = 0.0;
     for(int i = 0; i < tamanho; i++){
         int n = notas[inicio + i];
-        desvio_total += (n-media)*(n-media);
+        desvio_total += ((n-ret.media)*(n-ret.media))/(1.f*tamanho ?: 1);
     }
-    double desvio = sqrt(desvio_total/(tamanho));
+    double desvio = sqrt(desvio_total);
 
     //Usa o vetor de frequências  para calcular a mediana.
     double med = mediana(freq->cidade,tamanho);
@@ -87,7 +85,7 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
     /* printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2lf, média: %.2lf e DP: %.2lf\n",r,c,ret.minimo,ret.maximo,med,media,desvio); */
     vals[(reg*c) + cid].minimo = ret.minimo;
     vals[(reg*c) + cid].maximo = ret.maximo;
-    vals[(reg*c) + cid].soma = ret.soma;
+    vals[(reg*c) + cid].media = ret.media;
     vals[(reg*c) + cid].med = med;
     vals[(reg*c) + cid].desvio = desvio;
 
@@ -114,15 +112,13 @@ Dados comp_regiao(unsigned int* notas, int tam_regiao, int tam_cidade, Frequenci
             ret.minimo = n.minimo;
         }
         //Atuliza a soma.
-        ret.soma += n.soma;
+        ret.media += n.media/(1.f*tam_regiao);
     }
 
     //Calcula a media baseado na soma.
-    double media = (double)ret.soma / (tam_cidade*tam_regiao);
-
     //Verifica se é a melhor região até o momento.
-    if(media > melhores->r_media){
-        melhores->r_media = media;
+    if(ret.media > melhores->r_media){
+        melhores->r_media = ret.media;
         melhores->r_regiao = reg;
     }
 
@@ -130,9 +126,9 @@ Dados comp_regiao(unsigned int* notas, int tam_regiao, int tam_cidade, Frequenci
     double desvio_total = 0.0;
     for(int i = 0; i < tam_cidade*tam_regiao; i++){
         int n = notas[reg*tam_regiao*tam_cidade + i];
-        desvio_total += (n-media)*(n-media);
+        desvio_total += ((n-ret.media)*(n-ret.media))/(1.f*(tam_regiao*tam_cidade) ?: 1);
     }
-    ret.desvio = sqrt(desvio_total/(tam_regiao*tam_cidade));
+    ret.desvio = sqrt(desvio_total);
 
     //Usa o vetor de frequências  para calcular a mediana.
     ret.med = mediana(freq->regiao,tam_regiao*tam_cidade);
@@ -166,7 +162,7 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
         }
 
         //Atuliza a soma.
-        ret.soma += n.soma;
+        ret.media += n.media/(1.f*tam_pais);
     }
 
     //Imprime o resumo de cada região.
@@ -177,21 +173,18 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
         vals[(tam_pais*tam_regiao) + i].minimo = ret.minimo;
         vals[(tam_pais*tam_regiao) + i].maximo = ret.maximo;
         vals[(tam_pais*tam_regiao) + i].med = ret.med;
-        vals[(tam_pais*tam_regiao) + i].soma = ret.soma;
+        vals[(tam_pais*tam_regiao) + i].media = ret.media;
         vals[(tam_pais*tam_regiao) + i].desvio = ret.desvio;
     }
     free(regioes);
-
-    //Calcula a media nacional baseado na soma.
-    double media = (double)ret.soma / (tam_cidade*tam_regiao*tam_pais);
 
     //Usa a média para calcular o desvio padrão.
     double desvio_total = 0.0;
     for(int i = 0; i < tam_cidade*tam_regiao*tam_pais; i++){
         int n = notas[i];
-        desvio_total += (n-media)*(n-media);
+        desvio_total += ((n-ret.media)*(n-ret.media))/(1.f*(tam_pais*tam_regiao*tam_cidade) ?: 1.f);
     }
-    double desvio = sqrt(desvio_total/(tam_pais*tam_regiao*tam_cidade));
+    double desvio = sqrt(desvio_total);
 
     //Usa o vetor de frequências  para calcular a mediana.
     double med = mediana(freq.brasil,tam_pais*tam_regiao*tam_cidade);
@@ -200,7 +193,7 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
     /* printf("Brasil: menor: %d, maior: %d, mediana: %.2lf, média: %.2lf e DP: %.2lf\n",ret.minimo,ret.maximo,med,media,desvio); */
     vals[(tam_pais*tam_regiao) + tam_regiao].minimo = ret.minimo;
     vals[(tam_pais*tam_regiao) + tam_regiao].maximo = ret.maximo;
-    vals[(tam_pais*tam_regiao) + tam_regiao].soma = ret.soma;
+    vals[(tam_pais*tam_regiao) + tam_regiao].media = ret.media;
     vals[(tam_pais*tam_regiao) + tam_regiao].med = med;
     vals[(tam_pais*tam_regiao) + tam_regiao].desvio = desvio;
     /* printf("\nMelhor região: Região %d\n",melhores.r_regiao); */
@@ -219,12 +212,12 @@ int main(){
     Dados *vals = malloc(((r*c) + r + 1)*sizeof(Dados));
     Melhores *melhores = malloc(sizeof(Melhores));
 
-    clock_t init, end, aux;
-    aux = clock();
-    init = clock();
+    double init, end, aux;
+    aux = omp_get_wtime();
+    init = omp_get_wtime();
     comp_geral(notas, r, c, a, vals, melhores);
-    end = clock();
-    printf("Time elapsed: %lf\n", (end - init - (init - aux))/(1.f*CLOCKS_PER_SEC));
+    end = omp_get_wtime();
+    printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
     for (unsigned long i = 0; i < r*c; ++i) {
         if (i != 0 && !(i % c)) printf("\n");
@@ -235,7 +228,7 @@ int main(){
             vals[i].minimo,
             vals[i].maximo,
             vals[i].med,
-            vals[i].soma/((double) c),
+            vals[i].media,
             vals[i].desvio
         );
     }
@@ -248,7 +241,7 @@ int main(){
             vals[i].minimo,
             vals[i].maximo,
             vals[i].med,
-            vals[i].soma/((double) c*a),
+            vals[i].media,
             vals[i].desvio
         );
     }
@@ -259,7 +252,7 @@ int main(){
         vals[r*c + r].minimo,
         vals[r*c + r].maximo,
         vals[r*c + r].med,
-        vals[r*c + r].soma/((double)r*c*a),
+        vals[r*c + r].media,
         vals[r*c + r].desvio
     );
 
