@@ -91,6 +91,9 @@ Country* setup(unsigned int nRegions, unsigned int nCities, unsigned int nStuden
 
 /* Computa os dados pedidos sobre o país dado e inicializado com os valores passados */
 void comp(Country* country) {
+    if (!country) exit(1);
+
+    // Permite loops paralelizados aninhadas
     omp_set_nested(1);
 
     unsigned int freqs[SPREAD] = { 0 }, // Vetor de frequências de notas para cálculo
@@ -125,7 +128,7 @@ void comp(Country* country) {
             // Ponteiro para a atual cidade no loop (auxiliar)
             City *curCity = &curRegion->cities[j];
             // Valores a serem calculados no contexto da cidade
-            unsigned int cityMax = 0, // TODO testar loop separado para gerar frequência e para cálculo
+            unsigned int cityMax = 0,
                 cityMin = UINT_MAX;
             double cityMed = 0;
             typeof(freqs) cityFreqs = { 0 };
@@ -142,35 +145,39 @@ void comp(Country* country) {
                 cityMed += grade/(1.f * country->nStudents);
             }
 
-            // Registra valores da cidade com base nos dados reduzidos das notas
+            // Mede dados do nível superior
             regionMed += cityMed/(1.f * country->nCities);
-
-            curCity->maior = cityMax;
             if (cityMax > regionMax) regionMax = cityMax;
-            curCity->menor = cityMin;
             if (cityMin < regionMin) regionMin = cityMin;
-            curCity->media = cityMed;
             if (cityMed > bestCity) bestCity = cityMed;
+
+            // Registra valores da cidade com base nos dados reduzidos das notas
+            curCity->maior = cityMax;
+            curCity->menor = cityMin;
+            curCity->media = cityMed;
             curCity->mediana = mediana(cityFreqs, country->nStudents);
             curCity->dp = dpParalelo(cityFreqs, country->nStudents, cityMed);
 
+            // Atualiza vetor de frequência do nível superior
             #pragma omp simd
             for (int s = 0; s < SPREAD; ++s)
                 regionFreqs[s] += cityFreqs[s];
         }
 
+        // Registra dados do nível superior
         countryMed += regionMed/(1.f * country->nRegions);
+        if (regionMax > countryMax) countryMax = regionMax;
+        if (regionMin < countryMin) countryMin = regionMin;
+        if (regionMed > bestRegion) bestRegion = regionMed;
 
         // Registra valores da região com base nos dados reduzidos das cidades
         curRegion->maior = regionMax;
-        if (regionMax > countryMax) countryMax = regionMax;
         curRegion->menor = regionMin;
-        if (regionMin < countryMin) countryMin = regionMin;
         curRegion->media = regionMed;
-        if (regionMed > bestRegion) bestRegion = regionMed;
         curRegion->mediana = mediana(regionFreqs, country->nCities * country->nStudents);
         curRegion->dp = dpParalelo(regionFreqs, country->nCities * country->nStudents, regionMed);
 
+        // Atualiza vetor de frequência do nível superior
         #pragma omp simd
         for (int s = 0; s < SPREAD; ++s)
             freqs[s] += regionFreqs[s];
@@ -241,16 +248,21 @@ int main() {
     // Gera país
     Country* country = setup(nRegions, nCities, nStudents, seed);
 
+    // Variáveis para cálculo de tempo elapsado
     double init, end, aux;
     aux = omp_get_wtime();
     init = omp_get_wtime();
+
     // Computa valores
     comp(country);
+
+    // Calcula e exibe tempo elapsado
     end = omp_get_wtime();
     printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
     // Exibição formatada
     display(country);
+
     // Libera memória
     freeInnerCountry(country);
     if (country) free(country);

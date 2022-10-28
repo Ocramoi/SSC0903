@@ -59,7 +59,7 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
             ret.minimo = n;
         }
 
-        //Atuliza a soma
+        //Atuliza a media
         ret.media += n/(1.f*tamanho);
     }
 
@@ -82,7 +82,6 @@ Dados comp_cidade(unsigned int* notas,int inicio, int tamanho, Frequencias* freq
     double med = mediana(freq->cidade,tamanho);
 
     //Imprime o resultado.
-    /* printf("Reg %d - Cid %d: menor: %d, maior: %d, mediana: %.2lf, média: %.2lf e DP: %.2lf\n",r,c,ret.minimo,ret.maximo,med,media,desvio); */
     vals[(reg*c) + cid].minimo = ret.minimo;
     vals[(reg*c) + cid].maximo = ret.maximo;
     vals[(reg*c) + cid].media = ret.media;
@@ -111,7 +110,8 @@ Dados comp_regiao(unsigned int* notas, int tam_regiao, int tam_cidade, Frequenci
         if(n.minimo < ret.minimo){
             ret.minimo = n.minimo;
         }
-        //Atuliza a soma.
+
+        //Atuliza a media
         ret.media += n.media/(1.f*tam_regiao);
     }
 
@@ -146,7 +146,7 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
     //Cria um espaço para guardar os resumos das regiões, que serão impressos no final.
     Dados* regioes = malloc(tam_pais*sizeof(Dados));
 
-    //Para cad região...
+    //Para cada região...
     for( int i = 0; i < tam_pais; i++){
 
         //Pega o resumo da região e salva no vetor.
@@ -161,15 +161,13 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
             ret.minimo = n.minimo;
         }
 
-        //Atuliza a soma.
+        //Atuliza a media
         ret.media += n.media/(1.f*tam_pais);
     }
 
-    //Imprime o resumo de cada região.
+    // Registra o resumo de cada região.
     for( int i = 0; i < tam_pais; i++){
         Dados ret = regioes[i];
-        /* double media = (double) ret.soma/(tam_regiao*tam_cidade); */
-        /* printf("Reg %d: menor: %d, maior: %d, mediana: %.2lf, média: %.2lf e DP: %.2lf\n",r,ret.minimo,ret.maximo,ret.med,media,ret.desvio); */
         vals[(tam_pais*tam_regiao) + i].minimo = ret.minimo;
         vals[(tam_pais*tam_regiao) + i].maximo = ret.maximo;
         vals[(tam_pais*tam_regiao) + i].med = ret.med;
@@ -189,18 +187,18 @@ Dados comp_geral(unsigned int* notas,int tam_pais, int tam_regiao, int tam_cidad
     //Usa o vetor de frequências  para calcular a mediana.
     double med = mediana(freq.brasil,tam_pais*tam_regiao*tam_cidade);
 
-    //Imprime os dados nacionais, a cidade e região premeadas.
-    /* printf("Brasil: menor: %d, maior: %d, mediana: %.2lf, média: %.2lf e DP: %.2lf\n",ret.minimo,ret.maximo,med,media,desvio); */
+    // Registra os dados nacionais, a cidade e região premeadas.
     vals[(tam_pais*tam_regiao) + tam_regiao].minimo = ret.minimo;
     vals[(tam_pais*tam_regiao) + tam_regiao].maximo = ret.maximo;
     vals[(tam_pais*tam_regiao) + tam_regiao].media = ret.media;
     vals[(tam_pais*tam_regiao) + tam_regiao].med = med;
     vals[(tam_pais*tam_regiao) + tam_regiao].desvio = desvio;
-    /* printf("\nMelhor região: Região %d\n",melhores.r_regiao); */
-    /* printf("Melhor cidade: Região %d, Cidade %d\n",melhores.c_regiao,melhores.c_cidade); */
+
+    // Registra dados de melhor região/cidade
     br->r_regiao = melhores.r_regiao;
     br->c_regiao = melhores.c_regiao;
     br->c_cidade = melhores.c_cidade;
+
     return ret;
 }
 
@@ -212,13 +210,19 @@ int main(){
     Dados *vals = malloc(((r*c) + r + 1)*sizeof(Dados));
     Melhores *melhores = malloc(sizeof(Melhores));
 
+    // Variáveis para cálculo de tempo elapsado
     double init, end, aux;
     aux = omp_get_wtime();
     init = omp_get_wtime();
+
+    // Computa valores
     comp_geral(notas, r, c, a, vals, melhores);
+
+    // Calcula e exibe tempo elapsado
     end = omp_get_wtime();
     printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
+    // Imprime dados formatados
     for (unsigned long i = 0; i < r*c; ++i) {
         if (i != 0 && !(i % c)) printf("\n");
         printf(
@@ -260,6 +264,7 @@ int main(){
     printf("\nMelhor região: Região %d\n", melhores->r_regiao);
     printf("Melhor cidade: Região %d, Cidade %d\n", melhores->c_regiao, melhores->c_cidade);
 
+    // Libera memória
     free(notas);
     free(vals);
     free(melhores);
