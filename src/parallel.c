@@ -258,10 +258,10 @@ int main() {
 
     // Calcula e exibe tempo elapsado
     end = omp_get_wtime();
-    printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
     // Exibição formatada
     display(country);
+    printf("\nTempo de resposta sem considerar E/S, em segundos: %.3lfs\n", (end - init - (init - aux)));
 
     // Libera memória
     freeInnerCountry(country);

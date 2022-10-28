@@ -220,7 +220,6 @@ int main(){
 
     // Calcula e exibe tempo elapsado
     end = omp_get_wtime();
-    printf("Time elapsed: %lf\n", (end - init - (init - aux)));
 
     // Imprime dados formatados
     for (unsigned long i = 0; i < r*c; ++i) {
@@ -263,6 +262,7 @@ int main(){
 
     printf("\nMelhor região: Região %d\n", melhores->r_regiao);
     printf("Melhor cidade: Região %d, Cidade %d\n", melhores->c_regiao, melhores->c_cidade);
+    printf("\nTempo de resposta sem considerar E/S, em segundos: %.3lfs\n", (end - init - (init - aux)));
 
     // Libera memória
     free(notas);
