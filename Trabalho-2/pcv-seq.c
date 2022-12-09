@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 #define MAX 10
 
@@ -14,6 +15,14 @@ int* pesos_aleatorios(int N){
     return pesos;
 }
 
+int fatorial(int n){
+    int prod = 1;
+    for(int i = 2; i <= n; i++){
+       prod *= i;
+    }
+    return prod;
+}
+
 int n_vazio(int * vet, int n){
     int i = 0;
     while(n > 0){
@@ -23,55 +32,54 @@ int n_vazio(int * vet, int n){
     return i;
 }
 
-int dist_cam(int primeiro, int tam, int* ja_foram, int* pesos, int* caminho, int N){
-    if(tam == 0){
-        return pesos[N*primeiro + 0];
-    }
-    int menor_dist = N*MAX;
 
-    int* cam_filho = malloc(tam * sizeof(int));
-
-    for (int i = 0; i < tam; i++){
-        int atual = n_vazio(ja_foram,i+1);
+int dist_cam(int num, int N, int* ja_foram, int* pesos){
+    int soma = 0;
+    int ultimo = 0;
+    memset(ja_foram, 0, N * sizeof(int));
+    ja_foram[0] = 1;
+    for (int i = N-1; i > 0; i--){
+        int atual = n_vazio(ja_foram,num % i + 1);
         ja_foram[atual] = 1;
-        int dist =  pesos[N*primeiro + atual] + dist_cam(atual, tam-1,ja_foram,pesos,cam_filho,N);
-        ja_foram[atual] = 0;
-        if (dist < menor_dist) {
-            menor_dist = dist;
-            for(int i =0; i < tam-1;i++) caminho[i] = cam_filho[i];
-            caminho[tam-1] = atual;
-        }
+        soma += pesos[N*ultimo + atual];
+        ultimo = atual;
+        num /= i;
     }
-    free(cam_filho);
-
-    /*
-    for (int i = 0; i < N - tam; i++) printf("..");
-    printf("%2d : %d",menor_dist,primeiro);
-    for (int i = tam-1; i >= 0; i--) printf("-%d", caminho[i]);
-    printf("\n");
-    */
-
-    return menor_dist;
+    return soma + pesos[N*ultimo + 0];
 }
 
-int main(){
-    int N = 12;
-    int* ja_foram = calloc(N,sizeof(int));
-    int* caminho = malloc(N * sizeof(int));
+
+
+
+int main(int argc, char* argv[]){
+    int N = atoi(argv[1]);
     int* pesos = pesos_aleatorios(N);
+    int* ja_foram = malloc(N * sizeof(int));
 
-    /*
-    for(int i = 0; i < N*N; i++){
-        printf("%d ",pesos[i]);
-        if(i % N == N-1) printf("\n");       
+    int menor_dist = N*MAX;
+    int menor_caminho = 0;
+
+    int caminhos = fatorial(N-1);
+    for(int i = 0; i < caminhos; i++){
+        int dist = dist_cam(i,N,ja_foram,pesos);
+        if(dist < menor_dist){
+            menor_dist = dist;
+            menor_caminho = i;
+        }
     }
-    */
 
-    ja_foram[0] == 1;
-    caminho[N-1] = 0;
-    int menor_dist = dist_cam(0,N-1,ja_foram,pesos,caminho,N);
-    printf("%d\n",menor_dist);
-    for(int i =N-1; i >= 0;i--) printf("%d ",caminho[i]);
+    memset(ja_foram, 0, N * sizeof(int));
+    ja_foram[0] = 1;
+    printf("0");
+    int num = menor_caminho;
+    for(int i = N-1; i > 0;i--){
+        int atual = n_vazio(ja_foram,num % i + 1);
+        ja_foram[atual] = 1;
+        printf("-%d",atual);  
+        num /= i;
+    }
+
+    printf("-0\n%d\n",menor_dist);
 
     free(ja_foram);
     free(pesos);
